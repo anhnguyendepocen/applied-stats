@@ -1,1 +1,3 @@
-# Materials for STA2201H Methods of Applied Statistics II, Winter semester 2020
+# Materials for STA2201H 
+
+Methods of Applied Statistics II, Winter semester 2020
