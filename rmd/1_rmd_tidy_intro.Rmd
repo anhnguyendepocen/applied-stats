@@ -20,13 +20,6 @@ To start a new R Markdown file in Rstudio, go to File --> New File --> R Markdow
 
 There are various options for output code, results, etc. For example, if you don't want your final report to include the code (but just the output, e.g. graphs or tables) then you can specify `echo=FALSE` at the beginning of the chunk within the curly brackets (or set global options like I have done above). 
 
-Read in some packages that we'll be using:
-
-```{r}
-library(tidyverse)
-library(here)
-```
-
 ## Writing math
 
 Writing equations is essentially the same as in LaTeX. You can write inline equations using the \$ e.g. $y = ax+b$. You can write equations on a separate line with two \$s e.g. 
@@ -50,7 +43,15 @@ Getting greek letters, symbols, subscripts, bars etc is the same as LaTeX. A few
 
 # Tidyverse
 
-On top of the base R functionality, there's lots of different packages that different people have made to improve the useability of the language. One of the most successful suite of packages is now called the 'tidyverse'. The tidyverse contains a range of functionality that help to manipulate and visualize data. 
+Read in some packages that we'll be using:
+
+```{r}
+library(tidyverse)
+library(here)
+```
+
+
+On top of the base R functionality, there's lots of different packages that different people have made to improve the usability of the language. One of the most successful suite of packages is now called the 'tidyverse'. The tidyverse contains a range of functionality that help to manipulate and visualize data. 
 
 Read in mortality rates for Canada. These data come from the [Human Mortality Database](https://www.mortality.org/), which is a great source for studying mortality in high-income countries. 
 
@@ -118,7 +119,7 @@ dm %>%
 
 
 
-Now, let's calulate the mean female mortality rate by age over all the years. To do this, we need to `group_by` Age, and then use `summarize` to calculate the mean:
+Now, let's calculate the mean female mortality rate by age over all the years. To do this, we need to `group_by` Age, and then use `summarize` to calculate the mean:
 
 ```{r}
 dm %>% 
