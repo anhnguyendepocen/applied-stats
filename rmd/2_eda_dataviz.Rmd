@@ -64,7 +64,7 @@ Use the `list_packages` function to look whats available look at what's availabl
 
 ```{r}
 all_data <- list_packages(limit = 500)
-head(all_data)
+all_data
 ```
 
 Let's download the data on TTC subway delays in 2019. There are multiple files for 2019 so we need to get them all and make them into one big dataframe. 

@@ -1,0 +1,84 @@
+---
+title: "Help with Lab 2 Exercises"
+author: "Monica Alexander"
+date: "1/15/2020"
+output: html_document
+---
+Very rough!
+
+```{r}
+library(tidyverse)
+library(opendatatoronto)
+library(janitor)
+```
+
+Get all the datasets available
+
+```{r}
+all_data <- list_packages(limit = 500)
+all_data
+```
+
+Look at the campaigns 2014-2017 and download the data file
+
+```{r}
+list_package_resources("f6651a40-2f52-46fc-9e04-b760c16edd5c")
+d <- get_resource("d99bb1f3-949a-4497-bb96-c93bbd203130")
+
+```
+
+`d` is a list of dataframes. find the majoral sheet and select that. Have a look at the dataframe
+
+```{r}
+names(d)
+d <- d$`2_Mayor_Contributions_2014_election.xls`
+d
+```
+
+Oh no! It look's like the column names are in the first row??? We don't want that. fix that up:
+
+```{r}
+colnames(d) <- d[1,]
+d <- d[-1,]
+?janitor::row_to_names # could also use this
+
+d <- clean_names(d)
+```
+
+contributions need to be numeric
+
+```{r}
+d <- d %>% 
+  mutate(amount = as.numeric(contribution_amount))
+```
+
+
+Visualize contributions
+
+```{r}
+ggplot(d, aes(x = amount)) + geom_histogram() + scale_x_log10()
+```
+
+look at top 10 amounts
+
+```{r}
+d %>% 
+  arrange(-amount) %>% 
+  select(contributors_name, relationship_to_candidate, candidate, amount)
+```
+
+```{r}
+d %>% 
+  filter(is.na(relationship_to_candidate)) %>% # remove those w/ relationship
+  ggplot(aes(x = amount)) + geom_histogram() 
+```
+
+top candidates by total contributions
+
+```{r}
+d %>% 
+  group_by(candidate) %>% 
+  summarise(tot = sum(amount)) %>% 
+  arrange(-tot)
+```
+
