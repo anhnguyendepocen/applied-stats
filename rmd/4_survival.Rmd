@@ -3,7 +3,7 @@ title: "Survival Analysis"
 author: "Monica Alexander"
 date: "January 29 2020"
 output: 
-  html_document:
+  pdf_document:
     number_sections: true
     toc: true
 ---
@@ -15,6 +15,10 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 # Introduction
 
 This lab will take you through some main techniques for use in survival analysis. 
+
+## What to hand in 
+
+Please push your Rmd and compiled document **in PDF form** to GitHub. **The questions for this week are dispersed throughout the lab.**
 
 ## Data
 
