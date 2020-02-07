@@ -55,11 +55,12 @@ With plots or tables, give me three observations about the times to second birth
 
 A: Could do a lot of different things here; note that (as usual) I was expecting you to also explain the charts, not just do the charts (i.e. tell me why they are interesting).
 
-Histogram of times by age suggest similar patterns, but young people have a longer tail:
+Histogram of times by age suggest similar patterns, but many more births to younger women:
 
 ```{r}
 f12 %>% 
-  ggplot(aes(next.ivl, fill = age_group)) + geom_histogram(position = 'dodge', aes(y = ..density..))
+  filter(event==1) %>%  
+  ggplot(aes(next.ivl, fill = age_group)) + geom_histogram(position = 'dodge')
 ```
 
 Plotting the mean birth interval by year suggests a big outlier at the end of the dataset:
