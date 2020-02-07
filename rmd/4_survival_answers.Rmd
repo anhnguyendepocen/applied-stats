@@ -62,10 +62,11 @@ f12 %>%
   ggplot(aes(next.ivl, fill = age_group)) + geom_histogram(position = 'dodge', aes(y = ..density..))
 ```
 
-Plotting the mean birth interval by year suggests a big outlier at the start of the dataset:
+Plotting the mean birth interval by year suggests a big outlier at the end of the dataset:
 
 ```{r}
 f12 %>% 
+  filter(event==1) %>% 
   group_by(year) %>% 
   summarise(mean_ivl = mean(next.ivl)) %>% 
   ggplot(aes(year, mean_ivl)) + geom_line() + 
