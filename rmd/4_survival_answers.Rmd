@@ -304,10 +304,11 @@ summary(fit_age)
 
 Use the `survival_prob` function defined above to help you find the proportion of women aged less than 30 who have had their second birth within 5 years of their first birth.
 
-A: About 88% of women had had their second birth within 5 years. 
+A: almost 96% of younger women give birth within 5 years. 
 
 ```{r}
-lambdas_young <- exp(coef(fit_age)[-C+1] + coef(fit_age)[C+1])
+lambdas_young <- exp(coef(fit_age)[-C+1])
+lambdas_old <- exp(coef(fit_age)[-C+1] + coef(fit_age)[C+1])
 1- (survival_prob(lambdas_young, cuts) %>% filter(time==5) %>% select(surv) %>% pull()) 
 ```
 
