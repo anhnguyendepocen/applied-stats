@@ -57,7 +57,10 @@ dr %>%
   geom_density(data = ds %>% mutate(sim = 1), 
                aes(x = log(birthweight), col = "y")) + 
   scale_color_manual(name = "", 
-                     values = c("y" = "darkblue", "y_rep" = "lightblue"))
+                     values = c("y" = "darkblue", 
+                                "y_rep" = "lightblue")) + 
+  ggtitle("Distribution of observed and replicated birthweights") + 
+  theme_bw(base_size = 16)
 
 
 
