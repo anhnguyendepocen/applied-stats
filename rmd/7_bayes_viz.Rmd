@@ -195,7 +195,7 @@ summary(mod2)$summary[c("beta[1]", "beta[2]", "sigma"),]
 
 ## Question 4
 
-For reference I have uploaded some model 2 results. Check your results are similar. 
+For reference I have uploaded some model 2 results. Check your results are similar. Note: order of my covariates is: intercept, preterm, log_gest, interaction. 
 
 ```{r}
 load(here("output", "mod2.Rda"))
