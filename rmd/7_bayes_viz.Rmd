@@ -108,7 +108,7 @@ Let's check to see what the resulting distribution of birth weights look like gi
 
 ## Question 2
 
-For Model 1, simulate values of $\beta$s and $\sigma$ based on the priors above. Use these values to simulate (log) birth weights from the likelihood specified in Model 1, based on the set of observed gestational weights. Plot the resulting distribution of simulated (log) birth weights. Do 1000 simulations. Here's some skeleton code. Remember to set `eval = TRUE` before you submit. **Also the gestational weights should be centered and standardized**. 
+For Model 1, simulate values of $\beta$s and $\sigma$ based on the priors above. Use these values to simulate (log) birth weights from the likelihood specified in Model 1, based on the set of observed gestational weights. Plot the resulting distribution of simulated (log) birth weights. Do 1000 simulations. Here's some skeleton code. Remember to set `eval = TRUE` before you submit. **Also the gestational weeks should be centered and standardized**. 
 
 ```{r, eval = F}
 set.seed(182)
@@ -152,7 +152,7 @@ Now fit the model
 ```{r}
 mod1 <- stan(data = stan_data, 
              file = here("code/models/", "simple_weight.stan"),
-             iter = 500,
+             iter = 250,
              seed = 243)
 ```
 
