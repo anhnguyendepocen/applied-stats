@@ -35,8 +35,8 @@ $$
 
 i.e. varying intercepts, fixed slope on floor. I want you to 
 
-- reproduce the graph on slide 49. 
-- plot samples from the posterior predictive distribution for a new household in county 2 with basement level measurement, compared to samples from the posterior distribution of the mean county effect in county 2 (i.e., a graph similar to slide 38).
+- reproduce the graph on slide 43 
+- plot samples from the posterior predictive distribution for a new household in county 2 with basement level measurement, compared to samples from the posterior distribution of the mean county effect in county 2 (i.e., a graph similar to slide 32).
 
 Here's code to get the data into a useful format:
 
@@ -73,8 +73,8 @@ Note, in the model:
 So to complete this task sucessfully you will need to show me / produce:
 
 - stan code for the model
-- a plot like slide 38
-- a plot like slide 49
+- a plot like slide 32
+- a plot like slide 43
 
 Suggested steps
 
