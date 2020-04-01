@@ -1,0 +1,10 @@
+name: example_shiny
+title:
+username:
+account: monica-alexander
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2036804
+bundleId: 2955049
+url: https://monica-alexander.shinyapps.io/example_shiny/
+when: 1585763303.2045
