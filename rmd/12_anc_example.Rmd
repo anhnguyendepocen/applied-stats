@@ -1,0 +1,215 @@
+---
+title: "P-splines regression in Stan"
+author: "Monica Alexander"
+date: "4/4/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Overview
+
+This rmd gives an overview of fitting Penalized splines regression in Stan to estimate and project a number of time series that have missing observations and varying amounts of measurement error. The outcome of interest is the proportion of women who received at least four antenatal visits (ANC4) during their pregnancy by country. This is an important indicator of maternal and child health, and formed one of the Millennium Development Goals. 
+
+This dataset brings together information on ANC4 from surveys and administrative sources globally, up to 2015 (it's a few years old). It's in the `distortr` package, which you can install from my GitHub (https://github.com/MJAlexander/distortr).
+
+Please treat this as an example for illustrative purposes only, and don't put too much weight on actual projections. Combining data from different sources with various biases is a complex problem and very much simplified here. 
+
+# Data
+
+Let's have a look at the data. Notice for a lot of the observations, we have a standard error value, which is based on the size of the sample and other survey variables. 
+
+
+```{r}
+# devtools::install_github("MJAlexander/distortr") # run this to install distortr
+library(distortr)
+library(tidyverse)
+library(rstan)
+library(tidybayes)
+library(here)
+library(boot)
+data("anc4") # from the distotr package
+```
+
+Tidying up a few things here, and reducing the dataset for the purposes of this illustration
+
+```{r}
+anc4 <- anc4 %>% 
+  mutate(who_region = ifelse(str_ends(who_region, "O"), who_region, paste0(who_region, "O"))) %>% 
+  mutate(source_type = ifelse(is.na(source_type), 3, source_type)) %>% 
+  mutate(max_se = max(logit_se, na.rm = T)) %>% 
+  mutate(logit_se = ifelse(is.na(logit_se), max_se, logit_se)) %>% 
+  mutate(logit_se = ifelse(logit_se==0, 0.03, logit_se)) %>% 
+  filter(!is.na(obs_year), !is.na(anc_prop))
+
+
+# some names are outdated, manually fix
+anc4$country[anc4$country=="Czech Republic"] <- "Czechia"
+anc4$country[anc4$country=="Democratic People's Republic of Korea"] <- "Dem. People's Republic of Korea"
+anc4$country[anc4$country=="Swaziland"] <- "Eswatini"
+anc4$country[anc4$country=="The former Yugoslav Republic of Macedonia"] <- "North Macedonia"
+
+# for the purposes of this illustration, let's remove countries that have less than 3 obs
+more_than_two_obs <- anc4 %>%
+  filter(obs_year>2004) %>% 
+  group_by(iso) %>% 
+  count() %>% 
+  arrange(-n) %>% 
+  filter(n>2) %>% 
+  select(iso) %>% pull()
+
+anc4 <- anc4 %>% 
+  filter(iso %in% more_than_two_obs)
+
+```
+
+let's look at raw data, faceted by WHO region. In general, increasing over time. You can see what the codes mean here: https://www.who.int/healthinfo/global_burden_disease/definition_regions/en/. Proportions relatively high in the European Region, and relatively low in SE Asia region. 
+
+```{r}
+anc4 %>% 
+  filter(!is.na(source)) %>% 
+  ggplot(aes(obs_year, anc_prop, pch = source)) + 
+  geom_point() +  facet_wrap(~who_region)
+```
+
+
+Look at a few example countries
+```{r}
+anc4 %>% 
+  filter(iso %in% c("AUS","BRA","IND", "ZWE")) %>% 
+  ggplot(aes(obs_year, anc_prop, pch = source)) + 
+  geom_point() + 
+  scale_y_log10()+
+  geom_errorbar(aes(ymin = anc_prop - 2*se, ymax = anc_prop + 2*se)) + 
+  facet_wrap(~iso)
+```
+
+
+
+
+## Model
+
+The outcome of interest is a proportion. We could model as a binomial, but to more easily incorporate the information about measurement error, let's most as a Logit-Normal:
+
+$$
+\text{logit }y_i \sim N(\mu_{t[i], c_[i]}, \sigma^2_i)
+$$
+Where the standard deviation is obtained from the `logit_se` column, and $(\mu_{t[i], c_[i]}$ refers to the year and country of the $i$th observation. Why logit? To ensure the proportions are always between 0 and 1. 
+
+Let's model $\mu$ with first order P-Splines
+
+$$
+\mu = B\alpha
+$$
+
+$B$ are the basis splines, with dimensions $P \times K$, $\alpha$ are the spline coefficients with dimensions $K \times C$, where $P$ is the number of years (periods, avoiding using T as it has other meanings in R), $K$ is the number of splines and $C$ is the number of countries. 
+
+To get the first order penalization, we put
+
+$$
+\alpha_{k,c} \sim N(\alpha_{k-1, c}, \sigma^2_{\alpha})
+$$
+and on the first $k$
+
+$$
+\alpha_{1,c} \sim N(0, \sigma^2_{\alpha})
+$$
+
+Note this is the simplest set-up for this kind of data. Natural extensions would include estimating a separate $\sigma^2_{\alpha, c}$ for each country and modeling $\sigma^2_{\alpha, c}$ hierarchically -- given we have countries within regions within the world, there could be a two level-hierarchy. We could also include covariates, such as GDP, average distance to health care facility, etc. 
+
+## Fit in Stan
+
+Refer to the Stan model file for implementation of this model. Let's get the inputs we need. First of all define vectors of years and countries (ISO stands for International Organization for Standardization).
+
+```{r}
+years <- 1995:2020
+isos <- sort(unique(anc4$iso))
+```
+
+Get the basis splines we need as our inputs. I'm choosing to place splines every 2.5 years.
+
+```{r}
+I <- 2.5 # between-knot length
+res <- GetSplines(years, I = I) # a function from distortr, to get splines of constant shape
+B.ik <- res$B.ik
+```
+
+Right, there's 31 countries (with more than two observations) but just to speed up this example, I'm going to randomly pick five. If you're playing round with extending the model you could run on all countries. This next chunk gets the input data in a form we need for the Stan model. 
+
+
+```{r}
+# pick five countries just for illustration and reduce the dataset
+set.seed(109)
+these_isos <- sort(isos[sample(1:length(isos), 5)]) 
+these_countries <- unique(anc4 %>% filter(iso %in% these_isos) %>% select(country) %>% pull())
+anc4_reduced <- anc4 %>% filter(iso %in% these_isos, obs_year>=(min(years))) %>% arrange(iso)
+
+# model inputs
+y <- anc4_reduced$logit_prop # logit props
+se <- anc4_reduced$logit_se # standard errors 
+t_i <- anc4_reduced$obs_year - (min(years)-1) # time index of each observation
+
+c_i <- as.numeric(as.factor(anc4_reduced$iso)) # country index of each observation
+P <- length(years) # number of years
+S <- length(these_isos) # number of countries
+```
+
+Run the model! 
+
+```{r, results = 'hide'}
+stan_data <- list(N = length(y),
+                  y = y,
+                  se = se,
+                  t_i = t_i,
+                  c_i = c_i,
+                  S = S,
+                  P = P,
+                  B = B.ik,
+                  K = ncol(B.ik))
+
+mod <- stan(data = stan_data, 
+            file = here("code/models/anc.stan"))
+```
+
+Check the Rhats are all below 1.1
+
+```{r}
+max(summary(mod)$summary[,"Rhat"])
+```
+
+
+Let's look at some traceplots to make sure everything looks okay. 
+
+```{r}
+traceplot(mod, "sigma")
+traceplot(mod, "alpha[1,1]")
+traceplot(mod, "alpha[10,5]")
+```
+
+
+Now we can use the `gather draws` and `median_qi` combo from the `tidybayes` package to quickly get some estimates. The posterior draws of `mu` are the estimated ANC4 proportions for each year and country on the logit scale. 
+
+```{r}
+res <- mod %>% 
+  gather_draws(mu[i,s]) %>% # extract mus
+  median_qi() %>% # summarise median + 95%CI
+  mutate(year = years[i],
+         iso = these_isos[s]) 
+res
+```
+
+Let's plot these along with the observed data. Note that we have to take the inverse logit of the results to get back to the natural scale. Obviously more modeling work to do here (e.g. the projections for India are a bit silly), but nicely illustratess the flexibility of splines and how it is possible to fill in missing years, and project forward and back in time. 
+
+```{r}
+res %>% 
+  ggplot(aes(year, inv.logit(.value))) + 
+  geom_line() + 
+  facet_wrap(~iso) + 
+  geom_ribbon(aes(ymin = inv.logit(.lower), ymax = inv.logit(.upper)), alpha = 0.2) + 
+  geom_point(data = anc4_reduced, aes(obs_year, anc_prop)) +
+  geom_errorbar(data = anc4_reduced, aes(x = obs_year, y = anc_prop, ymin = anc_prop-2*se, ymax = anc_prop+2*se)) + 
+  ylab("proportion") + ggtitle("Proportion of pregnant women who have at least 4 antenatal care visits")
+```
+
